@@ -6,79 +6,94 @@
     <title>RWT Calculator</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
             color: #333;
         }
         h2 {
             text-align: center;
-            color: #0056b3;
-        }
-        textarea, input, button {
-            font-size: 14px;
-            margin: 5px 0;
+            font-size: 1.8rem;
+            color: #555;
+            margin-bottom: 20px;
         }
         #pasteArea {
             width: 100%;
-            height: 150px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
+            height: 120px;
+            margin-bottom: 15px;
             padding: 10px;
-            border-radius: 5px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
         }
         button {
             padding: 10px 20px;
-            background-color: #0056b3;
-            color: white;
+            margin: 5px 0;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #007bff;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
         }
         button:hover {
-            background-color: #004085;
-        }
-        #outputTable, .summaryTable {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 20px;
-            background-color: white;
-        }
-        #outputTable td, #outputTable th, .summaryTable td, .summaryTable th {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        #outputTable th, .summaryTable th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-        #orderCounts, #summary, #liveUsers {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            background-color: #0056b3;
         }
         #timeFilter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        #timeFilter label {
+            font-weight: bold;
+        }
+        #timeFilter input {
+            padding: 5px 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        #tableContainer {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
             margin-top: 10px;
+            font-size: 0.9rem;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .summaryTable {
+            margin-top: 20px;
+        }
+        .summaryTable th {
+            background-color: #28a745;
+            color: #fff;
         }
         #credit {
-            margin-top: 20px;
+            margin-top: 30px;
             text-align: center;
-            font-style: italic;
-            color: #888;
-        }
-        .live-users-banner {
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #e9ecef;
-            border-radius: 5px;
-            font-size: 18px;
-            text-align: center;
-            color: #0056b3;
-            font-weight: bold;
+            font-size: 0.9rem;
+            color: #555;
         }
     </style>
 </head>
@@ -96,144 +111,216 @@
         <button onclick="filterByTime()">Filter</button>
     </div>
 
-    <div class="live-users-banner" id="liveUsers">Total Live Users: 0</div>
-
     <div id="tableContainer"></div>
     <div id="orderCounts"></div>
     <div id="summary"></div>
 
     <div id="credit">Designed and developed by Praveen Kumar B J</div>
 
-    <script>
-        let originalTableRows = [];
-        let liveUsers = 0;
+<script>
+    let originalTableRows = [];
 
-        function calculateTimeDifference(arrivedTime, pickedUpTime) {
-            arrivedTime = arrivedTime.trim();
-            pickedUpTime = pickedUpTime.trim();
+    function calculateTimeDifference(arrivedTime, pickedUpTime) {
+        arrivedTime = arrivedTime.trim();
+        pickedUpTime = pickedUpTime.trim();
 
-            if (arrivedTime === "-" || pickedUpTime === "-") {
-                return { minutes: 0, seconds: 0, totalMinutes: 0 };
-            }
-
-            const arrived = new Date(`1970-01-01T${arrivedTime}`);
-            const pickedUp = new Date(`1970-01-01T${pickedUpTime}`);
-
-            if (isNaN(arrived.getTime()) || isNaN(pickedUp.getTime())) {
-                return { minutes: 0, seconds: 0, totalMinutes: 0 };
-            }
-
-            const difference = pickedUp - arrived;
-            const minutes = Math.floor(difference / 60000);
-            const seconds = Math.floor((difference % 60000) / 1000);
-            const totalMinutes = minutes + seconds / 60;
-
-            return { minutes, seconds, totalMinutes };
+        if (arrivedTime === "-" || pickedUpTime === "-") {
+            return { minutes: 0, seconds: 0, totalMinutes: 0 };
         }
 
-        function decodeTable() {
-            const tableCode = document.getElementById('pasteArea').value;
+        const arrived = new Date(`1970-01-01T${arrivedTime}`);
+        const pickedUp = new Date(`1970-01-01T${pickedUpTime}`);
 
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(`<table>${tableCode}</table>`, 'text/html');
-
-            originalTableRows = Array.from(doc.querySelectorAll('tr'));
-
-            displayTable(originalTableRows);
+        if (isNaN(arrived.getTime()) || isNaN(pickedUp.getTime())) {
+            return { minutes: 0, seconds: 0, totalMinutes: 0 };
         }
 
-        function displayTable(tableRows) {
-            let swiggyCount = 0, zomatoCount = 0;
+        const difference = pickedUp - arrived;
+        const minutes = Math.floor(difference / 60000);
+        const seconds = Math.floor((difference % 60000) / 1000);
+        const totalMinutes = minutes + seconds / 60;
 
-            if (tableRows.length > 0) {
-                const outputTable = document.createElement('table');
-                outputTable.id = 'outputTable';
+        return { minutes, seconds, totalMinutes };
+    }
 
-                const headerRow = document.createElement('tr');
-                ['Index', 'Image', 'Order ID', 'Ordered Time', 'Rider Assigned', 'Rider Arrived', 'Picked Up Time', 'Rider Wait Time'].forEach(headerText => {
-                    const th = document.createElement('th');
-                    th.textContent = headerText;
-                    headerRow.appendChild(th);
-                });
-                outputTable.appendChild(headerRow);
+    function decodeTable() {
+        const tableCode = document.getElementById('pasteArea').value;
 
-                tableRows.forEach((row, index) => {
-                    const newRow = document.createElement('tr');
-                    const cells = row.querySelectorAll('td');
-                    let platform = '';
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<table>${tableCode}</table>`, 'text/html');
 
-                    cells.forEach((td, idx) => {
-                        const newCell = document.createElement('td');
+        originalTableRows = Array.from(doc.querySelectorAll('tr'));
 
-                        if (idx === 1) {
-                            const img = td.querySelector('img');
-                            newCell.appendChild(img.cloneNode(true));
+        displayTable(originalTableRows);
+    }
 
-                            const imgSrc = img.src;
-                            if (imgSrc.includes('swiggy')) {
-                                swiggyCount++;
-                                platform = 'Swiggy';
-                            } else if (imgSrc.includes('zomato')) {
-                                zomatoCount++;
-                                platform = 'Zomato';
-                            }
-                        } else {
-                            newCell.innerHTML = td.innerHTML;
-                        }
-                        newRow.appendChild(newCell);
-                    });
+    function displayTable(tableRows) {
+        let swiggyCount = 0, zomatoCount = 0;
+        let swiggyWaitTimes = [], zomatoWaitTimes = [];
+        let swiggyUnder2 = 0, zomatoUnder2 = 0;
+        let swiggyUnder5 = 0, zomatoUnder5 = 0;
 
-                    outputTable.appendChild(newRow);
-                });
+        if (tableRows.length > 0) {
+            const outputTable = document.createElement('table');
+            outputTable.id = 'outputTable';
 
-                const tableContainer = document.getElementById('tableContainer');
-                tableContainer.innerHTML = '';
-                tableContainer.appendChild(outputTable);
+            const headerRow = document.createElement('tr');
+            ['Index', 'Image', 'Order ID', 'Ordered Time', 'Rider Assigned', 'Rider Arrived', 'Picked Up Time', 'Rider Wait Time'].forEach(headerText => {
+                const th = document.createElement('th');
+                th.textContent = headerText;
+                headerRow.appendChild(th);
+            });
+            outputTable.appendChild(headerRow);
 
-                updateLiveUsers(swiggyCount + zomatoCount);
-            } else {
-                alert('No valid table data found');
-            }
-        }
-
-        function updateLiveUsers(count) {
-            liveUsers = count;
-            document.getElementById('liveUsers').textContent = `Total Live Users: ${liveUsers}`;
-        }
-
-        function filterByTime() {
-            const startTime = document.getElementById('startTime').value;
-            const endTime = document.getElementById('endTime').value;
-
-            if (!startTime || !endTime) {
-                alert('Please enter both start and end times');
-                return;
-            }
-
-            const filteredRows = originalTableRows.filter(row => {
+            tableRows.forEach(row => {
+                const newRow = document.createElement('tr');
                 const cells = row.querySelectorAll('td');
-                if (cells.length > 3) {
-                    const orderedTime = cells[3].textContent.trim();
-                    return isTimeInRange(orderedTime, startTime, endTime);
+                let riderArrivedTime = '';
+                let pickedUpTime = '';
+                let platform = '';
+
+                cells.forEach((td, index) => {
+                    const newCell = document.createElement('td');
+
+                    if (index === 1) {
+                        const img = td.querySelector('img');
+                        newCell.appendChild(img.cloneNode(true));
+
+                        const imgSrc = img.src;
+                        if (imgSrc.includes('swiggy')) {
+                            swiggyCount++;
+                            platform = 'Swiggy';
+                        } else if (imgSrc.includes('zomato')) {
+                            zomatoCount++;
+                            platform = 'Zomato';
+                        }
+                    } else {
+                        newCell.innerHTML = td.innerHTML;
+
+                        if (index === 5) {
+                            riderArrivedTime = td.textContent.trim();
+                        }
+                        if (index === 6) {
+                            pickedUpTime = td.textContent.trim();
+                        }
+                    }
+                    newRow.appendChild(newCell);
+                });
+
+                const waitTime = calculateTimeDifference(riderArrivedTime, pickedUpTime);
+                const waitTimeCell = document.createElement('td');
+                waitTimeCell.textContent = `${waitTime.minutes} min ${waitTime.seconds} sec`;
+
+                if (platform === 'Swiggy') {
+                    swiggyWaitTimes.push(waitTime.totalMinutes);
+                    if (waitTime.totalMinutes <= 2) swiggyUnder2++;
+                    if (waitTime.totalMinutes <= 5) swiggyUnder5++;
+                } else if (platform === 'Zomato') {
+                    zomatoWaitTimes.push(waitTime.totalMinutes);
+                    if (waitTime.totalMinutes <= 2) zomatoUnder2++;
+                    if (waitTime.totalMinutes <= 5) zomatoUnder5++;
                 }
-                return false;
+
+                newRow.appendChild(waitTimeCell);
+                outputTable.appendChild(newRow);
             });
 
-            displayTable(filteredRows);
+            const tableContainer = document.getElementById('tableContainer');
+            tableContainer.innerHTML = '';
+            tableContainer.appendChild(outputTable);
+
+            updateSummary(swiggyCount, zomatoCount, swiggyWaitTimes, zomatoWaitTimes, swiggyUnder2, zomatoUnder2, swiggyUnder5, zomatoUnder5);
+        } else {
+            alert('No valid table data found');
+        }
+    }
+
+    function updateSummary(swiggyCount, zomatoCount, swiggyWaitTimes, zomatoWaitTimes, swiggyUnder2, zomatoUnder2, swiggyUnder5, zomatoUnder5) {
+        const totalOrders = swiggyCount + zomatoCount;
+        const totalUnder2 = swiggyUnder2 + zomatoUnder2;
+        const totalUnder5 = swiggyUnder5 + zomatoUnder5;
+
+        const avgSwiggyWaitTime = swiggyWaitTimes.length > 0 ? (swiggyWaitTimes.reduce((a, b) => a + b, 0) / swiggyWaitTimes.length).toFixed(2) : "0.00";
+        const avgZomatoWaitTime = zomatoWaitTimes.length > 0 ? (zomatoWaitTimes.reduce((a, b) => a + b, 0) / zomatoWaitTimes.length).toFixed(2) : "0.00";
+        const allWaitTimes = [...swiggyWaitTimes, ...zomatoWaitTimes];
+        const avgOverallWaitTime = allWaitTimes.length > 0 ? (allWaitTimes.reduce((a, b) => a + b, 0) / allWaitTimes.length).toFixed(2) : "0.00";
+
+        const orderCountsDiv = document.getElementById('orderCounts');
+        orderCountsDiv.innerHTML = `
+            <table class="summaryTable">
+                <tr><th>Platform</th><th>Total Orders</th></tr>
+                <tr><td>Swiggy</td><td>${swiggyCount}</td></tr>
+                <tr><td>Zomato</td><td>${zomatoCount}</td></tr>
+                <tr><td><strong>Total</strong></td><td><strong>${totalOrders}</strong></td></tr>
+            </table>
+        `;
+
+        const summaryDiv = document.getElementById('summary');
+        summaryDiv.innerHTML = `
+            <h3>Summary</h3>
+            <table class="summaryTable">
+                <tr>
+                    <th>Metric</th>
+                    <th>Swiggy</th>
+                    <th>Zomato</th>
+                    <th>Overall</th>
+                </tr>
+                <tr>
+                    <td>Orders under 2 mins</td>
+                    <td>${swiggyUnder2} (${(swiggyCount > 0 ? ((swiggyUnder2 / swiggyCount) * 100).toFixed(2) : '0.00')}%)</td>
+                    <td>${zomatoUnder2} (${(zomatoCount > 0 ? ((zomatoUnder2 / zomatoCount) * 100).toFixed(2) : '0.00')}%)</td>
+                    <td>${totalUnder2} (${(totalOrders > 0 ? ((totalUnder2 / totalOrders) * 100).toFixed(2) : '0.00')}%)</td>
+                </tr>
+                <tr>
+                    <td>Orders under 5 mins</td>
+                    <td>${swiggyUnder5} (${(swiggyCount > 0 ? ((swiggyUnder5 / swiggyCount) * 100).toFixed(2) : '0.00')}%)</td>
+                    <td>${zomatoUnder5} (${(zomatoCount > 0 ? ((zomatoUnder5 / zomatoCount) * 100).toFixed(2) : '0.00')}%)</td>
+                    <td>${totalUnder5} (${(totalOrders > 0 ? ((totalUnder5 / totalOrders) * 100).toFixed(2) : '0.00')}%)</td>
+                </tr>
+                <tr>
+                    <td>Average Wait Time (mins)</td>
+                    <td>${avgSwiggyWaitTime}</td>
+                    <td>${avgZomatoWaitTime}</td>
+                    <td>${avgOverallWaitTime}</td>
+                </tr>
+            </table>
+        `;
+    }
+
+    function filterByTime() {
+        const startTime = document.getElementById('startTime').value;
+        const endTime = document.getElementById('endTime').value;
+
+        if (!startTime || !endTime) {
+            alert('Please enter both start and end times');
+            return;
         }
 
-        function isTimeInRange(time, start, end) {
-            const orderTime = new Date(`1970-01-01T${time}`);
-            const startTime = new Date(`1970-01-01T${start}`);
-            const endTime = new Date(`1970-01-01T${end}`);
-
-            if (endTime < startTime) {
-                endTime.setDate(endTime.getDate() + 1);
+        const filteredRows = originalTableRows.filter(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length > 3) {
+                const orderedTime = cells[3].textContent.trim();
+                return isTimeInRange(orderedTime, startTime, endTime);
             }
+            return false;
+        });
 
-            return orderTime >= startTime && orderTime <= endTime;
+        displayTable(filteredRows);
+    }
+
+    function isTimeInRange(time, start, end) {
+        const orderTime = new Date(`1970-01-01T${time}`);
+        const startTime = new Date(`1970-01-01T${start}`);
+        const endTime = new Date(`1970-01-01T${end}`);
+
+        if (endTime < startTime) {
+            endTime.setDate(endTime.getDate() + 1);
         }
-    </script>
+
+        return orderTime >= startTime && orderTime <= endTime;
+    }
+</script>
+
 
 </body>
 </html>
