@@ -1,31 +1,65 @@
-<!DOCTYPE html>
+
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>RWT Calculator </title>
+    <title>RWT Calculator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        h2 {
+            text-align: center;
+            color: #0056b3;
+        }
+        textarea, input, button {
+            font-size: 14px;
+            margin: 5px 0;
         }
         #pasteArea {
             width: 100%;
             height: 150px;
             margin-bottom: 10px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #004085;
         }
         #outputTable, .summaryTable {
             border-collapse: collapse;
             width: 100%;
             margin-top: 20px;
+            background-color: white;
         }
         #outputTable td, #outputTable th, .summaryTable td, .summaryTable th {
             border: 1px solid #ddd;
             padding: 8px;
+            text-align: center;
         }
         #outputTable th, .summaryTable th {
             background-color: #f2f2f2;
+            font-weight: bold;
         }
-        #orderCounts, #summary {
+        #orderCounts, #summary, #liveUsers {
             margin-top: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
         #timeFilter {
             margin-top: 10px;
@@ -34,12 +68,23 @@
             margin-top: 20px;
             text-align: center;
             font-style: italic;
+            color: #888;
+        }
+        .live-users-banner {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            font-size: 18px;
+            text-align: center;
+            color: #0056b3;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h2>“What gets measured gets done.”</h2>
+    <h2>"What gets measured gets done."</h2>
     <textarea id="pasteArea" placeholder="Paste HTML code here..."></textarea><br>
     <button onclick="decodeTable()">Decode</button>
 
@@ -51,6 +96,8 @@
         <button onclick="filterByTime()">Filter</button>
     </div>
 
+    <div class="live-users-banner" id="liveUsers">Total Live Users: 0</div>
+
     <div id="tableContainer"></div>
     <div id="orderCounts"></div>
     <div id="summary"></div>
@@ -59,6 +106,7 @@
 
     <script>
         let originalTableRows = [];
+        let liveUsers = 0;
 
         function calculateTimeDifference(arrivedTime, pickedUpTime) {
             arrivedTime = arrivedTime.trim();
@@ -96,9 +144,6 @@
 
         function displayTable(tableRows) {
             let swiggyCount = 0, zomatoCount = 0;
-            let swiggyWaitTimes = [], zomatoWaitTimes = [];
-            let swiggyUnder2 = 0, zomatoUnder2 = 0;
-            let swiggyUnder5 = 0, zomatoUnder5 = 0;
 
             if (tableRows.length > 0) {
                 const outputTable = document.createElement('table');
@@ -112,17 +157,15 @@
                 });
                 outputTable.appendChild(headerRow);
 
-                tableRows.forEach(row => {
+                tableRows.forEach((row, index) => {
                     const newRow = document.createElement('tr');
                     const cells = row.querySelectorAll('td');
-                    let riderArrivedTime = '';
-                    let pickedUpTime = '';
                     let platform = '';
 
-                    cells.forEach((td, index) => {
+                    cells.forEach((td, idx) => {
                         const newCell = document.createElement('td');
 
-                        if (index === 1) {
+                        if (idx === 1) {
                             const img = td.querySelector('img');
                             newCell.appendChild(img.cloneNode(true));
 
@@ -136,32 +179,10 @@
                             }
                         } else {
                             newCell.innerHTML = td.innerHTML;
-
-                            if (index === 5) {
-                                riderArrivedTime = td.textContent.trim();
-                            }
-                            if (index === 6) {
-                                pickedUpTime = td.textContent.trim();
-                            }
                         }
                         newRow.appendChild(newCell);
                     });
 
-                    const waitTime = calculateTimeDifference(riderArrivedTime, pickedUpTime);
-                    const waitTimeCell = document.createElement('td');
-                    waitTimeCell.textContent = `${waitTime.minutes} min ${waitTime.seconds} sec`;
-
-                    if (platform === 'Swiggy') {
-                        swiggyWaitTimes.push(waitTime.totalMinutes);
-                        if (waitTime.totalMinutes <= 2) swiggyUnder2++;
-                        if (waitTime.totalMinutes <= 5) swiggyUnder5++;
-                    } else if (platform === 'Zomato') {
-                        zomatoWaitTimes.push(waitTime.totalMinutes);
-                        if (waitTime.totalMinutes <= 2) zomatoUnder2++;
-                        if (waitTime.totalMinutes <= 5) zomatoUnder5++;
-                    }
-
-                    newRow.appendChild(waitTimeCell);
                     outputTable.appendChild(newRow);
                 });
 
@@ -169,62 +190,15 @@
                 tableContainer.innerHTML = '';
                 tableContainer.appendChild(outputTable);
 
-                updateSummary(swiggyCount, zomatoCount, swiggyWaitTimes, zomatoWaitTimes, swiggyUnder2, zomatoUnder2, swiggyUnder5, zomatoUnder5);
+                updateLiveUsers(swiggyCount + zomatoCount);
             } else {
                 alert('No valid table data found');
             }
         }
 
-        function updateSummary(swiggyCount, zomatoCount, swiggyWaitTimes, zomatoWaitTimes, swiggyUnder2, zomatoUnder2, swiggyUnder5, zomatoUnder5) {
-            const totalOrders = swiggyCount + zomatoCount;
-            const totalUnder2 = swiggyUnder2 + zomatoUnder2;
-            const totalUnder5 = swiggyUnder5 + zomatoUnder5;
-
-            const avgSwiggyWaitTime = swiggyWaitTimes.length > 0 ? (swiggyWaitTimes.reduce((a, b) => a + b, 0) / swiggyWaitTimes.length).toFixed(2) : "0.00";
-            const avgZomatoWaitTime = zomatoWaitTimes.length > 0 ? (zomatoWaitTimes.reduce((a, b) => a + b, 0) / zomatoWaitTimes.length).toFixed(2) : "0.00";
-            const allWaitTimes = [...swiggyWaitTimes, ...zomatoWaitTimes];
-            const avgOverallWaitTime = allWaitTimes.length > 0 ? (allWaitTimes.reduce((a, b) => a + b, 0) / allWaitTimes.length).toFixed(2) : "0.00";
-
-            const orderCountsDiv = document.getElementById('orderCounts');
-            orderCountsDiv.innerHTML = `
-                <table class="summaryTable">
-                    <tr><th>Platform</th><th>Total Orders</th></tr>
-                    <tr><td>Swiggy</td><td>${swiggyCount}</td></tr>
-                    <tr><td>Zomato</td><td>${zomatoCount}</td></tr>
-                    <tr><td><strong>Total</strong></td><td><strong>${totalOrders}</strong></td></tr>
-                </table>
-            `;
-
-            const summaryDiv = document.getElementById('summary');
-            summaryDiv.innerHTML = `
-                <h3>Summary</h3>
-                <table class="summaryTable">
-                    <tr>
-                        <th>Metric</th>
-                        <th>Swiggy</th>
-                        <th>Zomato</th>
-                        <th>Overall</th>
-                    </tr>
-                    <tr>
-                        <td>Orders under 2 mins</td>
-                        <td>${swiggyUnder2} (${(swiggyCount > 0 ? ((swiggyUnder2 / swiggyCount) * 100).toFixed(2) : '0.00')}%)</td>
-                        <td>${zomatoUnder2} (${(zomatoCount > 0 ? ((zomatoUnder2 / zomatoCount) * 100).toFixed(2) : '0.00')}%)</td>
-                        <td>${totalUnder2} (${(totalOrders > 0 ? ((totalUnder2 / totalOrders) * 100).toFixed(2) : '0.00')}%)</td>
-                    </tr>
-                    <tr>
-                        <td>Orders under 5 mins</td>
-                        <td>${swiggyUnder5} (${(swiggyCount > 0 ? ((swiggyUnder5 / swiggyCount) * 100).toFixed(2) : '0.00')}%)</td>
-                        <td>${zomatoUnder5} (${(zomatoCount > 0 ? ((zomatoUnder5 / zomatoCount) * 100).toFixed(2) : '0.00')}%)</td>
-                        <td>${totalUnder5} (${(totalOrders > 0 ? ((totalUnder5 / totalOrders) * 100).toFixed(2) : '0.00')}%)</td>
-                    </tr>
-                    <tr>
-                        <td>Average Wait Time (mins)</td>
-                        <td>${avgSwiggyWaitTime}</td>
-                        <td>${avgZomatoWaitTime}</td>
-                        <td>${avgOverallWaitTime}</td>
-                    </tr>
-                </table>
-            `;
+        function updateLiveUsers(count) {
+            liveUsers = count;
+            document.getElementById('liveUsers').textContent = `Total Live Users: ${liveUsers}`;
         }
 
         function filterByTime() {
